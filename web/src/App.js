@@ -1,31 +1,57 @@
 import React, { useEffect, useRef, useState } from "react";
 import "./App";
+import axios from "axios";
 
+
+const baseURL = "http://localhost:5000";
 const App = () => {
   const titleInputRef = useRef(null);
   const bodyInputRef = useRef(null);
   const [isloading, setIsloading] = useState(false);
-  const [alert, setAlert] = useState("")
-  
-  useEffect (()=> {
-    setTimeout(()=> {set}, 4000)
-  }, [alert])
-const getWeather = async (event) => {
-  event.preventDefault();
-  
-  try {
-    setIsloading(true)
+  const [alert, setAlert] = useState("");
 
-    const response = await axios.get
-  } catch (e) {
-    console.error(e);
+  useEffect(() => {
+    if (alert) {
+      setTimeout(() => {
+        setAlert("");
+      }, 4000);
+    }
+  }, [alert]);
+
+  useEffect (()=> {
+    getAllStories();
+  }, [])
+
+  const getAllStories = async () => {
+    const resp = await axios.get(`${baseURL}/api/vi/stories`)
+    console.log(resp.data);
   }
-}
-  
+
+  const postStory = async (event) => {
+    event.preventDefault();
+
+    try {
+      setIsloading(true);
+
+      const response = await axios.get(`${baseURL}/api/v1/story`, {
+        title : titleInputRef.current.value,
+        body : bodyInputRef.current.value
+      })
+      console.log("response:", response.data);
+      setIsloading(false);
+
+      setAlert(response?.data?.message);
+      event.target.reset();
+      
+    } catch (e) {
+      console.error(e);
+    }
+  };
+
   return (
     <div>
       <h1>Social Stories</h1>
-      <form onSubmit={getWeather}>
+      <form onSubmit={postStory}>
         <label htmlFor="titleInput">Title</label>
         <input
           type="text"
@@ -48,6 +74,8 @@ const getWeather = async (event) => {
         <br />
         <button type="submit">Post</button>
       </form>
+
+      {alert && <div className="alert">(alert)</div> }
     </div>
   );
 };
