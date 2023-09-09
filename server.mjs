@@ -1,5 +1,5 @@
 import OpenAI from "openai";
-import { PineconeClient } from "@pinecone-database/pinecone";
+import { Pinecone } from "@pinecone-database/pinecone";
 import { customAlphabet } from "nanoid";
 import express from "express";
 const nanoid = customAlphabet("1234567890", 20);
@@ -19,22 +19,21 @@ const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY, // This is also the default, can be omitted
 });
 
-const pinecone = new PineconeClient();
-await pinecone.init({
+const pinecone = new Pinecone({
   environment: process.env.PINECONE_ENVIRONMENT,
   apiKey: process.env.PINECONE_API_KEY,
 });
 
 app.get("/api/v1/stories", async (req, res) => {
-  const queryText = "retreated";
+  const queryText = "";
 
   const response = await openai.embeddings.create({
     model: "text-embedding-ada-002",
     input: queryText,
   });
 
-  const vector = response?.data[0]?.embeddings;
-  console.log(vector);
+  const vector = response?.data[0]?.embedding;
+  // console.log(vector);
 
   const index = pinecone.Index(process.env.PINECONE_INDEX_NAME);
   const queryResponse = await index.query({
@@ -64,6 +63,7 @@ app.post("/api/v1/story", async (req, res) => {
     model: "text-embedding-ada-002",
     input: `${req.body?.title} ${req.body?.body}`,
   });
+
   console.log("response?.data :", response?.data);
   const vector = response?.data[0].embedding;
   console.log("vector :", vector);
@@ -82,6 +82,7 @@ app.post("/api/v1/story", async (req, res) => {
     ],
     namespace: process.env.PINECONE_NAME_SPACE,
   };
+  console.log(upsertRequest);
 
   try {
     const upsertResponse = await index.upsert({ upsertRequest });
@@ -98,22 +99,68 @@ app.post("/api/v1/story", async (req, res) => {
   }
 });
 
-// app.put("/api/v1/story/:id", (req, res) => {
+app.put("/api/v1/story/:id", async (req, res) => {
+  console.log("req.params.id:", req.params.id);
+  console.log("req.body:", req.body);
 
-  
-// })
+  const response = await openai.embeddings.create({
+    model: "text-embedding-ada-002",
+    input: `${req.body?.title} ${req.body?.body}`,
+  });
 
+  console.log("response?.data", response?.data);
+  const vector = response?.data[0].embedding;
+  console.log("vector", vector);
 
-// app.get("/", async (req, res) => {
-//   res.send("Hello World !");
-// });
+  const index = pinecone.Index(process.env.PINECONE_INDEX_NAME);
+  const upsertRequest = {
+    vectors: [
+      {
+        id: req.params.id,
+        values: vector,
+        metadata: {
+          title: req.body?.title,
+          body: req.body?.body,
+        },
+      },
+    ],
+    namespace: process.env.PINECONE_NAME_SPACE,
+  };
+
+  try {
+    const upsertResponse = await index.upsert({ upsertRequest });
+  } catch (e) {
+    console.log("error :", e);
+    res.status(500).send({
+      message: "failed to create story, please try later",
+    });
+  }
+});
+
+app.delete("/api/v1/story/:id", async (req, res) => {
+  try {
+    const index = pinecone.Index(process.env.PINECONE_INDEX_NAME);
+    const deleteResponse = await index.delete1({
+      id: [req.params.id],
+      namespace: process.env.PINECONE_NAME_SPACE,
+    });
+
+    console.log("deleteResponse :", deleteResponse);
+
+    res.send({
+      message: "story deleted succesfully",
+    });
+  } catch (e) {
+    res.status(500).send({
+      message: "failed to delete story, please try later",
+    });
+  }
+});
 
 app.get(express.static(path.join(__dirname, "./web/build")));
 app.use("/", express.static(path.join(__dirname, "./web/build")));
 
-const port = process.env.port || 5000;
+const port = process.env.port || 5001;
 app.listen(port, () => {
   console.log(`Example app listening on port ${port}`);
 });
-
-
