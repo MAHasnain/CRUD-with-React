@@ -1,5 +1,5 @@
 import OpenAI from "openai";
-import { Pinecone } from "@pinecone-database/pinecone";
+import { PineconeClient } from "@pinecone-database/pinecone";
 import { customAlphabet } from "nanoid";
 import express from "express";
 const nanoid = customAlphabet("1234567890", 20);
@@ -19,7 +19,13 @@ const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY, // This is also the default, can be omitted
 });
 
-const pinecone = new Pinecone({
+// const pinecone = new Pinecone({
+//   environment: process.env.PINECONE_ENVIRONMENT,
+//   apiKey: process.env.PINECONE_API_KEY,
+// });
+
+const pinecone = new PineconeClient();
+await pinecone.init({
   environment: process.env.PINECONE_ENVIRONMENT,
   apiKey: process.env.PINECONE_API_KEY,
 });
@@ -42,7 +48,7 @@ app.get("/api/v1/stories", async (req, res) => {
       topK: 100,
       includeValue: true,
       includeMetaData: true,
-      namespace: process.env.PINECONE_NAME_SPACE,
+      // namespace: process.env.PINECONE_NAME_SPACE,
     },
   });
   queryResponse.matches.map((eachMatch) => {
@@ -56,6 +62,8 @@ app.get("/api/v1/stories", async (req, res) => {
   res.send(queryResponse.matches);
 });
 
+
+///  post request
 app.post("/api/v1/story", async (req, res) => {
   console.log("req.body:", req.body);
 
@@ -80,7 +88,7 @@ app.post("/api/v1/story", async (req, res) => {
         },
       },
     ],
-    namespace: process.env.PINECONE_NAME_SPACE,
+    // namespace: process.env.PINECONE_NAME_SPACE,
   };
   console.log(upsertRequest);
 
@@ -124,7 +132,7 @@ app.put("/api/v1/story/:id", async (req, res) => {
         },
       },
     ],
-    namespace: process.env.PINECONE_NAME_SPACE,
+    // namespace: process.env.PINECONE_NAME_SPACE,
   };
 
   try {
@@ -142,7 +150,7 @@ app.delete("/api/v1/story/:id", async (req, res) => {
     const index = pinecone.Index(process.env.PINECONE_INDEX_NAME);
     const deleteResponse = await index.delete1({
       id: [req.params.id],
-      namespace: process.env.PINECONE_NAME_SPACE,
+      // namespace: process.env.PINECONE_NAME_SPACE,
     });
 
     console.log("deleteResponse :", deleteResponse);
@@ -160,7 +168,7 @@ app.delete("/api/v1/story/:id", async (req, res) => {
 app.get(express.static(path.join(__dirname, "./web/build")));
 app.use("/", express.static(path.join(__dirname, "./web/build")));
 
-const port = process.env.port || 5001;
+const port = process.env.port || 5000;
 app.listen(port, () => {
   console.log(`Example app listening on port ${port}`);
 });
