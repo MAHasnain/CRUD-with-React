@@ -1,14 +1,16 @@
 import { useState, useRef, useEffect } from "react";
 import axios from "axios";
 import "./App.css";
+import e from "cors";
 
-const baseUrl = 'http://localhost:5000';
-
+const baseUrl = "http://localhost:5000";
 
 function App() {
   const titleInputRef = useRef(null);
   const bodyInputRef = useRef(null);
+  const searchInputRef = useRef(null);
   const [isLoading, setIsLoading] = useState(false);
+  const [isSearching, setIsSearching] = useState(false);
 
   const [alert, setAlert] = useState("");
 
@@ -19,7 +21,7 @@ function App() {
       setTimeout(() => {
         setAlert("");
         console.log("time out");
-      }, 4000)
+      }, 4000);
       console.log("effect");
     }
   }, [alert]);
@@ -31,7 +33,7 @@ function App() {
   const getAllStories = async () => {
     try {
       setIsLoading(true);
-      const resp = await axios.get(`${baseUrl}/api/v1/stories`)
+      const resp = await axios.get(`${baseUrl}/api/v1/stories`);
       console.log(resp.data);
       setData(resp.data);
 
@@ -40,8 +42,24 @@ function App() {
       setIsLoading(false);
       console.log(e);
     }
+  };
 
-  }
+  const searchStories = async (e) => {
+    e.preventDefault();
+    try {
+      setIsLoading(true);
+      const resp = await axios.get(
+        `${baseUrl}/api/v1/search?q=${searchInputRef.current.value}`
+      );
+      console.log(resp.data);
+      setData(resp.data);
+
+      setIsLoading(false);
+    } catch (e) {
+      setIsLoading(false);
+      console.log(e);
+    }
+  };
 
   const postStory = async (event) => {
     event.preventDefault();
@@ -79,7 +97,7 @@ function App() {
       setIsLoading(false);
       console.log(e);
     }
-  }
+  };
 
   const updateStory = async (e, id) => {
     try {
@@ -98,8 +116,7 @@ function App() {
       setIsLoading(false);
       console.log(e);
     }
-
-  }
+  };
 
   return (
     <div>
@@ -136,81 +153,90 @@ function App() {
       {isLoading && <div className="loading">loading...</div>}
 
       <br />
-      <hr />
-      <br />
 
-      {
-        data.map((eachStory, index) => (
-          <div key={eachStory?.id} className="storyCard">
+      <form onSubmit={searchStories} style={{ textAlign: "right" }}>
+        <input
+          ref={searchInputRef}
+          id="searchInput"
+          type="search"
+          placeholder="Search"
+          onFocus={() => {
+            setIsSearching(false);
+          }}
+        />
+        <button type="submit" hidden>
+          Search
+        </button>
+      </form>
 
-            {
-              (eachStory.isEdit) ?
-                (<form onSubmit={(e) => {
-                  updateStory(e, eachStory?.id)
-                }}>
-                  <label htmlFor="titleInput">Title: </label>
-                  <br />
-                  <input
-                    defaultValue={eachStory?.metadata?.title}
-                    name="titleInput"
-                    type="text"
-                    id="titleInput"
-                    maxLength={20}
-                    minLength={2}
-                    required
-                  />
-                  <br />
-                  <label htmlFor="bodyInput">what is in your mind: </label>
-                  <br />
-                  <textarea
-                    defaultValue={eachStory?.metadata?.body}
-                    name="bodyInput"
-                    type="text"
-                    id="bodyInput"
-                    maxLength={999}
-                    minLength={10}
-                    required
-                  ></textarea>
+      {data.map((eachStory, index) => (
+        <div key={eachStory?.id} className="storyCard">
+          {eachStory.isEdit ? (
+            <form
+              onSubmit={(e) => {
+                updateStory(e, eachStory?.id);
+              }}
+            >
+              <label htmlFor="titleInput">Title: </label>
+              <br />
+              <input
+                defaultValue={eachStory?.metadata?.title}
+                name="titleInput"
+                type="text"
+                id="titleInput"
+                maxLength={20}
+                minLength={2}
+                required
+              />
+              <br />
+              <label htmlFor="bodyInput">what is in your mind: </label>
+              <br />
+              <textarea
+                defaultValue={eachStory?.metadata?.body}
+                name="bodyInput"
+                type="text"
+                id="bodyInput"
+                maxLength={999}
+                minLength={10}
+                required
+              ></textarea>
 
-                  <br />
-                  <button type="submit">Update</button>
-                  <button onClick={() => {
-                    eachStory.isEdit = false;
-                    setData([...data]);
-                  }}
-                  >cancel</button>
-                </form>)
-
-                :
-                (<div>
-                  <h3>{eachStory?.metadata?.title}</h3>
-                  <p>{eachStory?.metadata?.body}</p>
-                  <button onClick={() => {
-                    deleteHandler(eachStory?.id)
-                  }}>Delete</button>
-                  <button onClick={() => {
-
-                    data[index].isEdit = true;
-                    setData([...data]);
-
-                  }}>Edit</button>
-                </div>)
-            }
-
-
-          </div>)
-
-        )
-      }
-
-
-
+              <br />
+              <button type="submit">Update</button>
+              <button
+                onClick={() => {
+                  eachStory.isEdit = false;
+                  setData([...data]);
+                }}
+              >
+                cancel
+              </button>
+            </form>
+          ) : (
+            <div>
+              <h3>{eachStory?.metadata?.title}</h3>
+              <p>{eachStory?.metadata?.body}</p>
+              <button
+                onClick={() => {
+                  deleteHandler(eachStory?.id);
+                }}
+              >
+                Delete
+              </button>
+              <button
+                onClick={() => {
+                  data[index].isEdit = true;
+                  setData([...data]);
+                }}
+              >
+                Edit
+              </button>
+            </div>
+          )}
+        </div>
+      ))}
     </div>
   );
 }
 
 export default App;
-
-
-
-

@@ -13,7 +13,13 @@ import "./config/index.mjs";
 const app = express();
 app.use(express.json());
 app.use(morgan("combined"));
-app.use(Cors());
+app.use(
+  Cors([
+    "http://localhost:3000",
+    "127.0.0.1",
+    "https://ewrer234234.appspot.app.com",
+  ])
+);
 
 const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY, // This is also the default, can be omitted
@@ -62,18 +68,51 @@ app.get("/api/v1/stories", async (req, res) => {
   res.send(queryResponse.matches);
 });
 
+app.get("/api/v1/search", async (req, res) => {
+  const queryText = req.query.q;
+
+  const response = await openai.embeddings.create({
+    model: "text-embedding-ada-002",
+    input: queryText,
+  });
+  const vector = response?.data[0]?.embedding;
+  console.log("vector : ", vector);
+
+  const index = pinecone.Index(process.env.PINECONE_INDEX_NAME);
+  const queryResponse = await index.query({
+    queryRequest: {
+      vector: vector,
+      topK: 20,
+      includeValue: true,
+      includeMetaData: true,
+      // namespace: process.env.PINECONE_NAME_SPACE,
+    },
+  });
+  queryResponse.matches.map((eachMatch) => {
+    console.log(
+      `score ${eachMatch.score.toFixed(3)} => ${JSON.stringify(
+        eachMatch.metadata
+      )}\n\n`
+    );
+  });
+  console.log(`${queryResponse.matches.length} records found `);
+
+  res.send(queryResponse.matches);
+});
 
 ///  post request
 app.post("/api/v1/story", async (req, res) => {
+  const startTime = new Date();
   console.log("req.body:", req.body);
 
   const response = await openai.embeddings.create({
     model: "text-embedding-ada-002",
     input: `${req.body?.title} ${req.body?.body}`,
   });
-
-  console.log("response?.data :", response?.data);
   const vector = response?.data[0].embedding;
+
+  const responseTime = new Date() - startTime;
+  console.log("response?.data :", response?.data);
   console.log("vector :", vector);
 
   const index = pinecone.Index(process.env.PINECONE_INDEX_NAME);
@@ -94,8 +133,9 @@ app.post("/api/v1/story", async (req, res) => {
 
   try {
     const upsertResponse = await index.upsert({ upsertRequest });
-    console.log("upsertResponse :", upsertRequest);
+    console.log("upsertResponse :", upsertResponse);
 
+    const responseTime = new Date() - startTime;
     res.send({
       message: "story created succesfully",
     });
