@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect } from "react";
 import axios from "axios";
 import "./App.css";
-import e from "cors";
+// import Cors from "cors";
 
 const baseUrl = "http://localhost:5000";
 
@@ -92,7 +92,7 @@ function App() {
 
       setIsLoading(false);
       setAlert(response?.data?.message);
-      getAllStories();
+      // getAllStories();
     } catch (e) {
       setIsLoading(false);
       console.log(e);
@@ -110,7 +110,7 @@ function App() {
       console.log("response: ", response.data);
 
       setIsLoading(false);
-      getAllStories();
+      // getAllStories();
       setAlert(response?.data?.message);
     } catch (e) {
       setIsLoading(false);
@@ -240,3 +240,6 @@ function App() {
 }
 
 export default App;
+
+
+ 
